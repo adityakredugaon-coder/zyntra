@@ -9,10 +9,21 @@ const {
   resetPassword
 } = require("../controllers/AuthController");
 
-router.post("/register",registerUser);
-router.post("/login",loginUser);
-router.post("/forgot-password", sendOtp);     // email submit
-router.post("/verify-otp", verifyOtp);        // OTP screen
-router.post("/reset-password", resetPassword); // new password
+// 🔐 middleware import
+const authMiddleware = require("../middleware/authMiddleware");
+
+// ================= PUBLIC ROUTES =================
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+
+// ================= PROTECTED ROUTES =================
+// 👉 अब email नहीं लगेगा, current user से काम होगा
+router.post("/forgot-password", authMiddleware, sendOtp);
+
+// 👉 OTP verify भी current user के लिए
+router.post("/verify-otp", authMiddleware, verifyOtp);
+
+// 👉 password reset भी token से
+router.post("/reset-password", authMiddleware, resetPassword);
 
 module.exports = router;

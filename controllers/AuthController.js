@@ -87,7 +87,7 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// ================= SEND OTP (ONLY LOGGED-IN USER) =================
+// ================= SEND OTP =================
 exports.sendOtp = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -103,12 +103,16 @@ exports.sendOtp = async (req, res) => {
       [decoded.id]
     );
 
+    if (users.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const user = users[0];
 
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     await db.query(
-      "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE WHERE id=?",
+      "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE, otp_verified=0 WHERE id=?",
       [otp, user.id]
     );
 
@@ -134,7 +138,7 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
-// ================= VERIFY OTP (ONLY CURRENT USER) =================
+// ================= VERIFY OTP =================
 exports.verifyOtp = async (req, res) => {
   try {
     const { otp } = req.body;
@@ -152,14 +156,19 @@ exports.verifyOtp = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const [users] = await db.query(
-      `SELECT * FROM users 
-       WHERE id=? AND otp=? AND otp_expire > NOW()`,
+      "SELECT * FROM users WHERE id=? AND otp=? AND otp_expire > NOW()",
       [decoded.id, Number(otp)]
     );
 
     if (users.length === 0) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
+
+    // ✅ OTP verified flag
+    await db.query(
+      "UPDATE users SET otp_verified=1 WHERE id=?",
+      [decoded.id]
+    );
 
     res.json({ message: "OTP verified" });
 
@@ -195,9 +204,20 @@ exports.resetPassword = async (req, res) => {
       [decoded.id]
     );
 
+    if (users.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const user = users[0];
 
-    // ❌ SAME PASSWORD BLOCK
+    // ❌ OTP verify check
+    if (!user.otp_verified) {
+      return res.status(403).json({
+        message: "Please verify OTP first",
+      });
+    }
+
+    // ❌ Same password block
     const isSame = await bcrypt.compare(password, user.password);
 
     if (isSame) {
@@ -209,7 +229,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db.query(
-      "UPDATE users SET password=?, otp=NULL, otp_expire=NULL WHERE id=?",
+      "UPDATE users SET password=?, otp=NULL, otp_expire=NULL, otp_verified=0 WHERE id=?",
       [hashedPassword, user.id]
     );
 
