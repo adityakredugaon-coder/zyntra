@@ -10,7 +10,7 @@ const {
 } = require("../controllers/AuthController");
 
 // 🔐 middleware import
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/AuthMiddleWare");
 
 // ================= PUBLIC ROUTES =================
 router.post("/register", registerUser);
