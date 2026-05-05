@@ -87,32 +87,29 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// ================= SEND OTP =================
+// ================= SEND OTP (ONLY LOGGED-IN USER) =================
 exports.sendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const token = req.headers.authorization?.split(" ")[1];
 
-    if (!email) {
-      return res.status(400).json({ message: "Email required" });
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const [users] = await db.query(
-      "SELECT * FROM users WHERE email = ?",
-      [email]
+      "SELECT * FROM users WHERE id = ?",
+      [decoded.id]
     );
 
-    if (users.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const user = users[0];
 
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     await db.query(
-      `UPDATE users 
-       SET otp = ?, 
-       otp_expire = DATE_FORMAT(NOW() + INTERVAL 5 MINUTE, '%Y%m%d%H%i%s') 
-       WHERE email = ?`,
-      [otp, email]
+      "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE WHERE id=?",
+      [otp, user.id]
     );
 
     const transporter = nodemailer.createTransport({
@@ -124,12 +121,12 @@ exports.sendOtp = async (req, res) => {
     });
 
     await transporter.sendMail({
-      to: email,
+      to: user.email,
       subject: "OTP for Password Reset",
       html: `<h3>Your OTP is: ${otp}</h3>`,
     });
 
-    res.json({ message: "OTP sent" });
+    res.json({ message: "OTP sent to your email" });
 
   } catch (err) {
     console.error(err);
@@ -137,47 +134,34 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
-// ================= VERIFY OTP =================
+// ================= VERIFY OTP (ONLY CURRENT USER) =================
 exports.verifyOtp = async (req, res) => {
   try {
-    let { otp } = req.body;
+    const { otp } = req.body;
 
-    // ✅ validation
     if (!otp) {
       return res.status(400).json({ message: "OTP required" });
     }
 
-    otp = Number(otp);
+    const token = req.headers.authorization?.split(" ")[1];
 
-    if (isNaN(otp)) {
-      return res.status(400).json({ message: "OTP must be number" });
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const [users] = await db.query(
       `SELECT * FROM users 
-       WHERE otp = ? 
-       AND otp_expire > DATE_FORMAT(NOW(), '%Y%m%d%H%i%s')
-       LIMIT 1`,
-      [otp]
+       WHERE id=? AND otp=? AND otp_expire > NOW()`,
+      [decoded.id, Number(otp)]
     );
 
     if (users.length === 0) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    const user = users[0];
-
-    // 🔥 reset token
-    const resetToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_SECRET,
-      { expiresIn: "10m" }
-    );
-
-    res.json({
-      message: "OTP verified",
-      resetToken,
-    });
+    res.json({ message: "OTP verified" });
 
   } catch (err) {
     console.error(err);
@@ -201,16 +185,32 @@ exports.resetPassword = async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const [users] = await db.query(
+      "SELECT * FROM users WHERE id=?",
+      [decoded.id]
+    );
+
+    const user = users[0];
+
+    // ❌ SAME PASSWORD BLOCK
+    const isSame = await bcrypt.compare(password, user.password);
+
+    if (isSame) {
+      return res.status(400).json({
+        message: "New password must be different from old password",
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db.query(
       "UPDATE users SET password=?, otp=NULL, otp_expire=NULL WHERE id=?",
-      [hashedPassword, decoded.id]
+      [hashedPassword, user.id]
     );
 
     res.json({ message: "Password updated successfully" });
@@ -220,4 +220,3 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Reset error" });
   }
 };
-
