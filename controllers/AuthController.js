@@ -111,8 +111,9 @@ exports.sendOtp = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000);
 
+    // ✅ FIX: otp_verified removed
     await db.query(
-      "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE, otp_verified=0 WHERE id=?",
+      "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE WHERE id=?",
       [otp, user.id]
     );
 
@@ -134,7 +135,7 @@ exports.sendOtp = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Error sending OTP" });
+    res.status(500).json({ message: "Error sending OTP", err: err.message });
   }
 };
 
@@ -164,13 +165,17 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // ✅ OTP verified flag
-    await db.query(
-      "UPDATE users SET otp_verified=1 WHERE id=?",
-      [decoded.id]
+    // ✅ NEW: reset token generate
+    const resetToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" } // short expiry
     );
 
-    res.json({ message: "OTP verified" });
+    res.json({ 
+      message: "OTP verified",
+      resetToken // 👈 ye frontend ko milega
+    });
 
   } catch (err) {
     console.error(err);
@@ -191,6 +196,7 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
+    // 👇 IMPORTANT: ab normal token nahi, resetToken use hoga
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
@@ -210,14 +216,6 @@ exports.resetPassword = async (req, res) => {
 
     const user = users[0];
 
-    // ❌ OTP verify check
-    if (!user.otp_verified) {
-      return res.status(403).json({
-        message: "Please verify OTP first",
-      });
-    }
-
-    // ❌ Same password block
     const isSame = await bcrypt.compare(password, user.password);
 
     if (isSame) {
@@ -229,7 +227,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db.query(
-      "UPDATE users SET password=?, otp=NULL, otp_expire=NULL, otp_verified=0 WHERE id=?",
+      "UPDATE users SET password=?, otp=NULL, otp_expire=NULL WHERE id=?",
       [hashedPassword, user.id]
     );
 
