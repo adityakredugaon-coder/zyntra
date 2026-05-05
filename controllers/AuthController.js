@@ -184,6 +184,7 @@ exports.verifyOtp = async (req, res) => {
     res.status(500).json({ message: "OTP verify error" });
   }
 };
+
 // ================= RESET PASSWORD =================
 exports.resetPassword = async (req, res) => {
   try {
@@ -219,3 +220,6 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Reset error" });
   }
 };
+
+
+
