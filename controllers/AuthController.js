@@ -6,6 +6,44 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
+//////// Get user profile using token ///////////////////
+
+exports.getUserProfile = async (req, res) => {
+  try {
+
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const [users] = await db.query(
+      "SELECT id, name, email FROM users WHERE id = ?",
+      [decoded.id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: "User fetched successfully",
+      user: users[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+
+    return res.status(500).json({ message: "Error fetching user" });
+  }
+};
+
 // ================= REGISTER =================
 exports.registerUser = async (req, res) => {
   try {

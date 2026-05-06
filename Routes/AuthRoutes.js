@@ -1,29 +1,21 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  registerUser,
-  loginUser,
-  sendOtp,
-  verifyOtp,
-  resetPassword
-} = require("../controllers/AuthController");
+const authController = require("../controllers/AuthController");
 
-// 🔐 middleware import
 const authMiddleware = require("../middleware/AuthMiddleWare");
 
 // ================= PUBLIC ROUTES =================
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", authController.registerUser);
+router.post("/login", authController.loginUser);
 
 // ================= PROTECTED ROUTES =================
-// 👉 अब email नहीं लगेगा, current user से काम होगा
-router.post("/forgot-password", authMiddleware, sendOtp);
+router.get("/profile", authMiddleware, authController.getUserProfile);
 
-// 👉 OTP verify भी current user के लिए
-router.post("/verify-otp", authMiddleware, verifyOtp);
+router.post("/forgot-password", authMiddleware, authController.sendOtp);
 
-// 👉 password reset भी token से
-router.post("/reset-password", authMiddleware, resetPassword);
+router.post("/verify-otp", authMiddleware, authController.verifyOtp);
+
+router.post("/reset-password", authMiddleware, authController.resetPassword);
 
 module.exports = router;
