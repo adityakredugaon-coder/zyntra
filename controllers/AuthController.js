@@ -1,3 +1,6 @@
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first"); // ✅ FIX for Render IPv6 issue
+
 const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -66,7 +69,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, type: "login" },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -111,14 +114,16 @@ exports.sendOtp = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // ✅ FIX: otp_verified removed
     await db.query(
       "UPDATE users SET otp=?, otp_expire=NOW() + INTERVAL 5 MINUTE WHERE id=?",
       [otp, user.id]
     );
 
+    // ✅ FIXED SMTP CONFIG
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -165,16 +170,16 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // ✅ NEW: reset token generate
+    // ✅ SECURE RESET TOKEN
     const resetToken = jwt.sign(
-      { id: decoded.id },
+      { id: decoded.id, type: "reset" },
       process.env.JWT_SECRET,
-      { expiresIn: "10m" } // short expiry
+      { expiresIn: "10m" }
     );
 
-    res.json({ 
+    res.json({
       message: "OTP verified",
-      resetToken // 👈 ye frontend ko milega
+      resetToken
     });
 
   } catch (err) {
@@ -196,7 +201,6 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // 👇 IMPORTANT: ab normal token nahi, resetToken use hoga
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
@@ -204,6 +208,13 @@ exports.resetPassword = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // ✅ IMPORTANT SECURITY CHECK
+    if (decoded.type !== "reset") {
+      return res.status(403).json({
+        message: "Invalid token for password reset",
+      });
+    }
 
     const [users] = await db.query(
       "SELECT * FROM users WHERE id=?",
