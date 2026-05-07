@@ -10,10 +10,10 @@ app.use(express.json());
 
 // Routes
 const authRoutes = require("./routes/AuthRoutes");
-const productRoutes = require("./routes/productRoutes");
+
 
 app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
+
 
 const PORT = process.env.PORT || 3000;
 
