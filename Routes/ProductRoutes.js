@@ -8,7 +8,7 @@ const {
   getSingleProduct,
   updateProduct,
   deleteProduct,
-} = require("../controllers/ProductController");
+} = require("../controllers/productController");
 
 // ADD PRODUCT
 router.post("/add", addProduct);
