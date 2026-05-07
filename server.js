@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 
 // Routes
-const authRoutes = require("./routes/AuthRoutes");
+const authRoutes = require("./Routes/AuthRoutes");
 
 
 app.use("/api/auth", authRoutes);
