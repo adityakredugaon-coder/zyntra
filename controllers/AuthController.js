@@ -175,7 +175,7 @@ exports.sendOtp = async (req, res) => {
       html: `<h3>Your OTP is: ${otp}</h3>`,
     });
 
-    res.json({ message: "OTP sent to your email" });
+    res.json({ message: "OTP sent to your email",otp:otp });
 
   } catch (err) {
     console.error(err);
