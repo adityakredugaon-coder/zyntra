@@ -15,6 +15,7 @@ exports.addToCart = async (req, res) => {
     if (!token) {
 
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
@@ -29,11 +30,12 @@ exports.addToCart = async (req, res) => {
     if (!product_id) {
 
       return res.status(400).json({
+        success: false,
         message: "Product id required",
       });
     }
 
-    // FIXED HERE
+    // CHECK PRODUCT
     const [product] = await db.query(
 
       "SELECT * FROM products WHERE id=?",
@@ -44,10 +46,12 @@ exports.addToCart = async (req, res) => {
     if (product.length === 0) {
 
       return res.status(404).json({
+        success: false,
         message: "Product not found",
       });
     }
 
+    // CHECK EXISTING CART
     const [existing] = await db.query(
 
       "SELECT * FROM cart WHERE user_id=? AND product_id=?",
@@ -55,6 +59,7 @@ exports.addToCart = async (req, res) => {
       [decoded.id, product_id]
     );
 
+    // UPDATE QUANTITY
     if (existing.length > 0) {
 
       await db.query(
@@ -68,12 +73,13 @@ exports.addToCart = async (req, res) => {
         ]
       );
 
-      return res.json({
+      return res.status(200).json({
         success: true,
-        message: "Cart updated",
+        message: "Cart updated successfully",
       });
     }
 
+    // INSERT NEW ITEM
     await db.query(
 
       "INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)",
@@ -85,14 +91,14 @@ exports.addToCart = async (req, res) => {
       ]
     );
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: "Product added to cart",
     });
 
   } catch (err) {
 
-    console.log(err);
+    console.log("ADD CART ERROR => ", err);
 
     res.status(500).json({
       success: false,
@@ -114,6 +120,7 @@ exports.getCart = async (req, res) => {
     if (!token) {
 
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
@@ -147,6 +154,7 @@ exports.getCart = async (req, res) => {
       [decoded.id]
     );
 
+    // TOTAL DIFFERENT PRODUCTS
     const [totalItems] = await db.query(
 
       `SELECT COUNT(*) AS total_cart_items
@@ -156,6 +164,7 @@ exports.getCart = async (req, res) => {
       [decoded.id]
     );
 
+    // TOTAL QUANTITY
     const [totalQuantity] = await db.query(
 
       `SELECT SUM(quantity) AS total_quantity
@@ -165,11 +174,11 @@ exports.getCart = async (req, res) => {
       [decoded.id]
     );
 
-    res.json({
+    res.status(200).json({
 
       success: true,
 
-      message: "Cart fetched",
+      message: "Cart fetched successfully",
 
       totalCartItems:
           totalItems[0].total_cart_items || 0,
@@ -182,7 +191,7 @@ exports.getCart = async (req, res) => {
 
   } catch (err) {
 
-    console.log(err);
+    console.log("GET CART ERROR => ", err);
 
     res.status(500).json({
       success: false,
@@ -204,6 +213,7 @@ exports.updateCartQuantity = async (req, res) => {
     if (!token) {
 
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
@@ -218,6 +228,7 @@ exports.updateCartQuantity = async (req, res) => {
     if (!cart_id || !quantity) {
 
       return res.status(400).json({
+        success: false,
         message: "Cart id and quantity required",
       });
     }
@@ -229,14 +240,14 @@ exports.updateCartQuantity = async (req, res) => {
       [quantity, cart_id]
     );
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: "Quantity updated",
+      message: "Quantity updated successfully",
     });
 
   } catch (err) {
 
-    console.log(err);
+    console.log("UPDATE CART ERROR => ", err);
 
     res.status(500).json({
       success: false,
@@ -258,6 +269,7 @@ exports.removeCartItem = async (req, res) => {
     if (!token) {
 
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
@@ -272,6 +284,7 @@ exports.removeCartItem = async (req, res) => {
     if (!cart_id) {
 
       return res.status(400).json({
+        success: false,
         message: "Cart id required",
       });
     }
@@ -283,14 +296,14 @@ exports.removeCartItem = async (req, res) => {
       [cart_id]
     );
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: "Item removed",
+      message: "Item removed successfully",
     });
 
   } catch (err) {
 
-    console.log(err);
+    console.log("REMOVE CART ERROR => ", err);
 
     res.status(500).json({
       success: false,
