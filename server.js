@@ -10,9 +10,10 @@ app.use(express.json());
 
 // Routes
 const authRoutes = require("./Routes/AuthRoutes");
-
-
 app.use("/api/auth", authRoutes);
+const cartRoutes =
+require("./routes/CartRoutes");
+app.use("/api/cart", cartRoutes);
 
 
 const PORT = process.env.PORT || 3000;
