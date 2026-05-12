@@ -12,7 +12,7 @@ app.use(express.json());
 const authRoutes = require("./Routes/AuthRoutes");
 app.use("/api/auth", authRoutes);
 const cartRoutes =
-require("./routes/CartRoutes");
+require("./Routes/CartRoutes");
 app.use("/api/cart", cartRoutes);
 
 
