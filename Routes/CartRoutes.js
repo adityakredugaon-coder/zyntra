@@ -9,7 +9,7 @@ const {
   getCart,
   removeCartItem,
   updateQuantity,
-} = require("../controllers/cartController");
+} = require("../controllers/CartController");
 
 
 // MIDDLEWARE
