@@ -2,54 +2,96 @@ const express = require("express");
 
 const router = express.Router();
 
-const authController =
+
+// CONTROLLERS
+const AuthController =
 require("../controllers/AuthController");
 
-const authMiddleware =
+
+// MIDDLEWARE
+const verifyToken =
 require("../middleware/AuthMiddleWare");
 
-//////// PUBLIC ROUTES ///////////////////
+
+
+// ======================================
+// REGISTER USER
+// ======================================
 
 router.post(
   "/register",
-  authController.registerUser,
+  AuthController.registerUser
 );
+
+
+
+// ======================================
+// LOGIN USER
+// ======================================
 
 router.post(
   "/login",
-  authController.loginUser,
+  AuthController.loginUser
 );
 
-//////// PROTECTED ROUTES ///////////////////
+
+
+// ======================================
+// GET USER PROFILE
+// ======================================
 
 router.get(
   "/profile",
-  authMiddleware,
-  authController.getUserProfile,
+  verifyToken,
+  AuthController.getUserProfile
 );
+
+
+
+// ======================================
+// UPDATE PROFILE
+// ======================================
 
 router.put(
   "/update-profile",
-  authMiddleware,
-  authController.updateProfile,
+  verifyToken,
+  AuthController.updateProfile
 );
 
+
+
+// ======================================
+// SEND OTP
+// ======================================
+
 router.post(
-  "/forgot-password",
-  authMiddleware,
-  authController.sendOtp,
+  "/send-otp",
+  verifyToken,
+  AuthController.sendOtp
 );
+
+
+
+// ======================================
+// VERIFY OTP
+// ======================================
 
 router.post(
   "/verify-otp",
-  authMiddleware,
-  authController.verifyOtp,
+  verifyToken,
+  AuthController.verifyOtp
 );
+
+
+
+// ======================================
+// RESET PASSWORD
+// ======================================
 
 router.post(
   "/reset-password",
-  authMiddleware,
-  authController.resetPassword,
+  AuthController.resetPassword
 );
+
 
 module.exports = router;

@@ -10,98 +10,80 @@ const jwt = require("jsonwebtoken");
 
 const nodemailer = require("nodemailer");
 
-//////// GET USER PROFILE ///////////////////
+const generateToken = require("../utils/generateToken");
+
+
+
+// ======================================
+// GET USER PROFILE
+// ======================================
 
 exports.getUserProfile = async (req, res) => {
 
   try {
 
-    const token =
-        req.headers.authorization
-            ?.split(" ")[1];
-
-    if (!token) {
-
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET,
-    );
+    const userId = req.user.user_id;
 
     const [users] = await db.query(
 
       `SELECT
-       id,
-       name,
-       email,
-       phone,
-       dob,
-       address1,
-       address2,
-       profileImage
-       FROM users
-       WHERE id = ?`,
+        user_id,
+        name,
+        email,
+        phone,
+        dob,
+        address1,
+        address2,
+        profileImage
+      FROM users
+      WHERE user_id = ?`,
 
-      [decoded.id],
+      [userId]
+
     );
 
     if (users.length === 0) {
 
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
+
     }
 
-    res.json({
+    return res.status(200).json({
 
-      message:
-      "User fetched successfully",
+      success: true,
 
       user: users[0],
+
     });
 
   } catch (err) {
 
-    console.error(err);
-
-    if (err.name === "TokenExpiredError") {
-
-      return res.status(401).json({
-        message: "Token expired",
-      });
-    }
+    console.log(err);
 
     return res.status(500).json({
-      message: "Error fetching user",
+      success: false,
+      message: "Get profile error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// UPDATE PROFILE ///////////////////
+
+
+// ======================================
+// UPDATE PROFILE
+// ======================================
 
 exports.updateProfile = async (req, res) => {
 
   try {
 
-    const token =
-        req.headers.authorization
-            ?.split(" ")[1];
-
-    if (!token) {
-
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET,
-    );
+    const userId = req.user.user_id;
 
     const {
       name,
@@ -112,17 +94,18 @@ exports.updateProfile = async (req, res) => {
       profileImage,
     } = req.body;
 
+
     await db.query(
 
       `UPDATE users
-       SET
-       name = ?,
-       phone = ?,
-       dob = ?,
-       address1 = ?,
-       address2 = ?,
-       profileImage = ?
-       WHERE id = ?`,
+      SET
+        name = ?,
+        phone = ?,
+        dob = ?,
+        address1 = ?,
+        address2 = ?,
+        profileImage = ?
+      WHERE user_id = ?`,
 
       [
         name,
@@ -131,49 +114,60 @@ exports.updateProfile = async (req, res) => {
         address1,
         address2,
         profileImage,
-        decoded.id,
-      ],
+        userId,
+      ]
+
     );
 
-    const [updatedUser] =
-    await db.query(
+
+    const [updatedUser] = await db.query(
 
       `SELECT
-       id,
-       name,
-       email,
-       phone,
-       dob,
-       address1,
-       address2,
-       profileImage
-       FROM users
-       WHERE id = ?`,
+        user_id,
+        name,
+        email,
+        phone,
+        dob,
+        address1,
+        address2,
+        profileImage
+      FROM users
+      WHERE user_id = ?`,
 
-      [decoded.id],
+      [userId]
+
     );
 
-    res.json({
 
-      message:
-      "Profile updated successfully",
+    return res.status(200).json({
+
+      success: true,
+
+      message: "Profile updated successfully",
 
       user: updatedUser[0],
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
-
-      message:
-      "Profile update error",
+    return res.status(500).json({
+      success: false,
+      message: "Update profile error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// REGISTER ///////////////////
+
+
+// ======================================
+// REGISTER USER
+// ======================================
 
 exports.registerUser = async (req, res) => {
 
@@ -185,74 +179,88 @@ exports.registerUser = async (req, res) => {
       password,
     } = req.body;
 
-    if (
-        !name ||
-        !email ||
-        !password
-    ) {
+
+    // VALIDATION
+    if (!name || !email || !password) {
 
       return res.status(400).json({
-        message:
-        "All fields required",
+        success: false,
+        message: "All fields are required",
       });
+
     }
 
-    const [existing] =
-    await db.query(
 
+    // CHECK EXISTING USER
+    const [existingUser] = await db.query(
       "SELECT * FROM users WHERE email = ?",
-
-      [email],
+      [email]
     );
 
-    if (existing.length > 0) {
+    if (existingUser.length > 0) {
 
       return res.status(400).json({
-        message:
-        "User already exists",
+        success: false,
+        message: "User already exists",
       });
+
     }
 
-    const hashedPassword =
-    await bcrypt.hash(password, 10);
 
+    // HASH PASSWORD
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
+
+
+    // INSERT USER
     const [result] = await db.query(
 
       `INSERT INTO users
-       (
-       name,
-       email,
-       password
-       )
-       VALUES (?, ?, ?)`,
+      (
+        name,
+        email,
+        password
+      )
+      VALUES (?, ?, ?)`,
 
       [
         name,
         email,
         hashedPassword,
-      ],
+      ]
+
     );
 
-    res.json({
 
-      message:
-      "User registered successfully",
+    return res.status(201).json({
 
-      userId:
-      result.insertId,
+      success: true,
+
+      message: "User registered successfully",
+
+      user_id: result.insertId,
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Register error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// LOGIN ///////////////////
+
+
+// ======================================
+// LOGIN USER
+// ======================================
 
 exports.loginUser = async (req, res) => {
 
@@ -263,258 +271,260 @@ exports.loginUser = async (req, res) => {
       password,
     } = req.body;
 
-    if (
-        !email ||
-        !password
-    ) {
+
+    // VALIDATION
+    if (!email || !password) {
 
       return res.status(400).json({
-
-        message:
-        "Email & password required",
+        success: false,
+        message: "Email and password required",
       });
+
     }
 
+
+    // CHECK USER
     const [users] = await db.query(
-
       "SELECT * FROM users WHERE email = ?",
-
-      [email],
+      [email]
     );
 
     if (users.length === 0) {
 
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
+
     }
+
 
     const user = users[0];
 
-    const isMatch =
-    await bcrypt.compare(
+
+    // CHECK PASSWORD
+    const isMatch = await bcrypt.compare(
       password,
-      user.password,
+      user.password
     );
 
     if (!isMatch) {
 
       return res.status(401).json({
+        success: false,
         message: "Invalid password",
       });
+
     }
 
-    const token = jwt.sign(
 
-      {
-        id: user.id,
-        email: user.email,
-        type: "login",
-      },
+    // GENERATE TOKEN
+    const token = generateToken(user);
 
-      process.env.JWT_SECRET,
 
-      {
-        expiresIn: "1h",
-      },
-    );
+    return res.status(200).json({
 
-    res.json({
+      success: true,
 
-      message:
-      "Login successful",
+      message: "Login successful",
 
       token,
 
       user: {
 
-        id: user.id,
+        user_id: user.user_id,
 
         name: user.name,
 
         email: user.email,
+
       },
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Login error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// SEND OTP ///////////////////
+
+
+// ======================================
+// SEND OTP
+// ======================================
 
 exports.sendOtp = async (req, res) => {
 
   try {
 
-    const token =
-        req.headers.authorization
-            ?.split(" ")[1];
+    const userId = req.user.user_id;
 
-    if (!token) {
 
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET,
-    );
-
+    // GET USER
     const [users] = await db.query(
-
-      "SELECT * FROM users WHERE id = ?",
-
-      [decoded.id],
+      "SELECT * FROM users WHERE user_id = ?",
+      [userId]
     );
 
     if (users.length === 0) {
 
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
+
     }
+
 
     const user = users[0];
 
-    const otp =
-        Math.floor(
-          100000 +
-          Math.random() * 900000,
-        );
 
+    // GENERATE OTP
+    const otp = Math.floor(
+      100000 + Math.random() * 900000
+    );
+
+
+    // SAVE OTP
     await db.query(
 
       `UPDATE users
-       SET otp = ?,
-       otp_expire =
-       NOW() + INTERVAL 5 MINUTE
-       WHERE id = ?`,
+      SET
+        otp = ?,
+        otp_expire =
+        NOW() + INTERVAL 5 MINUTE
+      WHERE user_id = ?`,
 
       [
         otp,
-        user.id,
-      ],
+        userId,
+      ]
+
     );
 
+
+    // EMAIL TRANSPORT
     const transporter =
-    nodemailer.createTransport({
+      nodemailer.createTransport({
 
-      host: "smtp.gmail.com",
+        host: "smtp.gmail.com",
 
-      port: 587,
+        port: 587,
 
-      secure: false,
+        secure: false,
 
-      family: 4,
+        auth: {
 
-      auth: {
+          user: process.env.EMAIL_USER,
 
-        user:
-        process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
 
-        pass:
-        process.env.EMAIL_PASS,
-      },
-    });
+        },
 
+      });
+
+
+    // SEND MAIL
     await transporter.sendMail({
+
+      from: process.env.EMAIL_USER,
 
       to: user.email,
 
-      subject:
-      "OTP for Password Reset",
+      subject: "Password Reset OTP",
 
-      html:
-      `<h3>Your OTP is: ${otp}</h3>`,
+      html: `<h2>Your OTP is: ${otp}</h2>`,
+
     });
 
-    res.json({
 
-      message:
-      "OTP sent to your email",
+    return res.status(200).json({
 
-      otp: otp,
+      success: true,
+
+      message: "OTP sent successfully",
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
-
-      message:
-      "Error sending OTP",
-
-      err: err.message,
+    return res.status(500).json({
+      success: false,
+      message: "Send OTP error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// VERIFY OTP ///////////////////
+
+
+// ======================================
+// VERIFY OTP
+// ======================================
 
 exports.verifyOtp = async (req, res) => {
 
   try {
 
+    const userId = req.user.user_id;
+
     const { otp } = req.body;
+
 
     if (!otp) {
 
       return res.status(400).json({
+        success: false,
         message: "OTP required",
       });
+
     }
 
-    const token =
-        req.headers.authorization
-            ?.split(" ")[1];
 
-    if (!token) {
-
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET,
-    );
-
+    // CHECK OTP
     const [users] = await db.query(
 
       `SELECT * FROM users
-       WHERE id = ?
-       AND otp = ?
-       AND otp_expire > NOW()`,
+      WHERE user_id = ?
+      AND otp = ?
+      AND otp_expire > NOW()`,
 
       [
-        decoded.id,
-        Number(otp),
-      ],
+        userId,
+        otp,
+      ]
+
     );
+
 
     if (users.length === 0) {
 
       return res.status(400).json({
-
-        message:
-        "Invalid or expired OTP",
+        success: false,
+        message: "Invalid or expired OTP",
       });
+
     }
 
+
+    // RESET TOKEN
     const resetToken = jwt.sign(
 
       {
-        id: decoded.id,
+        user_id: userId,
         type: "reset",
       },
 
@@ -522,28 +532,40 @@ exports.verifyOtp = async (req, res) => {
 
       {
         expiresIn: "10m",
-      },
+      }
+
     );
 
-    res.json({
 
-      message:
-      "OTP verified",
+    return res.status(200).json({
+
+      success: true,
+
+      message: "OTP verified",
 
       resetToken,
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
-      message: "OTP verify error",
+    return res.status(500).json({
+      success: false,
+      message: "Verify OTP error",
+      error: err.message,
     });
+
   }
+
 };
 
-//////// RESET PASSWORD ///////////////////
+
+
+// ======================================
+// RESET PASSWORD
+// ======================================
 
 exports.resetPassword = async (req, res) => {
 
@@ -554,113 +576,101 @@ exports.resetPassword = async (req, res) => {
       confirmPassword,
     } = req.body;
 
-    if (
-        !password ||
-        !confirmPassword
-    ) {
+
+    // VALIDATION
+    if (!password || !confirmPassword) {
 
       return res.status(400).json({
-
-        message:
-        "All fields required",
+        success: false,
+        message: "All fields required",
       });
+
     }
+
 
     if (password !== confirmPassword) {
 
       return res.status(400).json({
-
-        message:
-        "Passwords do not match",
+        success: false,
+        message: "Passwords do not match",
       });
+
     }
 
+
+    // GET TOKEN
     const token =
-        req.headers.authorization
-            ?.split(" ")[1];
+      req.headers.authorization?.split(" ")[1];
+
 
     if (!token) {
 
       return res.status(401).json({
-        message: "Unauthorized",
+        success: false,
+        message: "Token required",
       });
+
     }
 
+
+    // VERIFY TOKEN
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET
     );
+
 
     if (decoded.type !== "reset") {
 
-      return res.status(403).json({
-
-        message:
-        "Invalid token for password reset",
+      return res.status(401).json({
+        success: false,
+        message: "Invalid reset token",
       });
+
     }
 
-    const [users] = await db.query(
 
-      "SELECT * FROM users WHERE id = ?",
-
-      [decoded.id],
-    );
-
-    if (users.length === 0) {
-
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    const user = users[0];
-
-    const isSame =
-    await bcrypt.compare(
-      password,
-      user.password,
-    );
-
-    if (isSame) {
-
-      return res.status(400).json({
-
-        message:
-        "New password must be different from old password",
-      });
-    }
-
+    // HASH PASSWORD
     const hashedPassword =
-    await bcrypt.hash(password, 10);
+      await bcrypt.hash(password, 10);
 
+
+    // UPDATE PASSWORD
     await db.query(
 
       `UPDATE users
-       SET
-       password = ?,
-       otp = NULL,
-       otp_expire = NULL
-       WHERE id = ?`,
+      SET
+        password = ?,
+        otp = NULL,
+        otp_expire = NULL
+      WHERE user_id = ?`,
 
       [
         hashedPassword,
-        user.id,
-      ],
+        decoded.user_id,
+      ]
+
     );
 
-    res.json({
 
-      message:
-      "Password updated successfully",
+    return res.status(200).json({
+
+      success: true,
+
+      message: "Password reset successful",
+
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
-    res.status(500).json({
-      message: "Reset error",
+    return res.status(500).json({
+      success: false,
+      message: "Reset password error",
+      error: err.message,
     });
+
   }
+
 };

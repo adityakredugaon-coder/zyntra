@@ -1,45 +1,54 @@
 const db = require("../config/db");
 
-const jwt = require("jsonwebtoken");
 
 
-// ================= ADD TO CART =================
+// ======================================
+// ADD TO CART
+// ======================================
 
 exports.addToCart = async (req, res) => {
 
   try {
 
-    const token =
-      req.headers.authorization?.split(" ")[1];
+    // USER ID FROM TOKEN
+    const userId = req.user.user_id;
 
-    if (!token) {
+    console.log("DECODED USER :", req.user);
 
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+    console.log("USER ID :", userId);
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
 
-    const { product_id, quantity } = req.body;
+    const {
+      product_id,
+      quantity,
+    } = req.body;
 
-    if (!product_id) {
+
+    // VALIDATION
+    if (!product_id || !quantity) {
 
       return res.status(400).json({
         success: false,
-        message: "Product id required",
+        message: "All fields are required",
       });
+
     }
 
-    // CHECK PRODUCT
+
+    // CHECK USER ID
+    if (!userId) {
+
+      return res.status(401).json({
+        success: false,
+        message: "User ID missing in token",
+      });
+
+    }
+
+
+    // CHECK PRODUCT EXISTS
     const [product] = await db.query(
-
-      "SELECT * FROM products WHERE id=?",
-
+      "SELECT * FROM products WHERE product_id = ?",
       [product_id]
     );
 
@@ -49,265 +58,255 @@ exports.addToCart = async (req, res) => {
         success: false,
         message: "Product not found",
       });
+
     }
 
-    // CHECK EXISTING CART
+
+    // CHECK PRODUCT ALREADY EXISTS
     const [existing] = await db.query(
-
-      "SELECT * FROM cart WHERE user_id=? AND product_id=?",
-
-      [decoded.id, product_id]
+      "SELECT * FROM cart WHERE user_id = ? AND product_id = ?",
+      [userId, product_id]
     );
+
 
     // UPDATE QUANTITY
     if (existing.length > 0) {
 
       await db.query(
-
-        "UPDATE cart SET quantity = quantity + ? WHERE user_id=? AND product_id=?",
-
-        [
-          quantity || 1,
-          decoded.id,
-          product_id,
-        ]
+        "UPDATE cart SET quantity = quantity + ? WHERE user_id = ? AND product_id = ?",
+        [quantity, userId, product_id]
       );
 
       return res.status(200).json({
         success: true,
         message: "Cart updated successfully",
       });
+
     }
 
-    // INSERT NEW ITEM
+
+    // INSERT PRODUCT
     await db.query(
-
       "INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)",
-
-      [
-        decoded.id,
-        product_id,
-        quantity || 1,
-      ]
+      [userId, product_id, quantity]
     );
 
-    res.status(201).json({
+
+    return res.status(201).json({
       success: true,
       message: "Product added to cart",
     });
 
-  } catch (err) {
+  } catch (error) {
 
-    console.log("ADD CART ERROR => ", err);
+    console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Add to cart error",
+      error: error.message,
     });
+
   }
+
 };
 
 
-// ================= GET CART =================
+
+
+// ======================================
+// GET CART
+// ======================================
 
 exports.getCart = async (req, res) => {
 
   try {
 
-    const token =
-      req.headers.authorization?.split(" ")[1];
+    const userId = req.user.user_id;
 
-    if (!token) {
-
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
 
     const [cart] = await db.query(
 
       `SELECT 
         cart.id,
+        cart.user_id,
+        cart.product_id,
         cart.quantity,
 
-        products.id AS product_id,
         products.name,
         products.description,
+        products.short_description,
         products.price,
+        products.discount_price,
         products.category,
+        products.sub_category,
         products.image
 
-       FROM cart
+      FROM cart
 
-       JOIN products
+      JOIN products
+      ON cart.product_id = products.product_id
 
-       ON cart.product_id = products.id
+      WHERE cart.user_id = ?
 
-       WHERE cart.user_id=?`,
+      ORDER BY cart.id DESC`,
 
-      [decoded.id]
+      [userId]
+
     );
 
-    // TOTAL DIFFERENT PRODUCTS
-    const [totalItems] = await db.query(
 
-      `SELECT COUNT(*) AS total_cart_items
-       FROM cart
-       WHERE user_id=?`,
-
-      [decoded.id]
-    );
-
-    // TOTAL QUANTITY
-    const [totalQuantity] = await db.query(
-
-      `SELECT SUM(quantity) AS total_quantity
-       FROM cart
-       WHERE user_id=?`,
-
-      [decoded.id]
-    );
-
-    res.status(200).json({
+    return res.status(200).json({
 
       success: true,
 
-      message: "Cart fetched successfully",
-
-      totalCartItems:
-          totalItems[0].total_cart_items || 0,
-
-      totalQuantity:
-          totalQuantity[0].total_quantity || 0,
+      totalItems: cart.length,
 
       cart,
+
     });
 
-  } catch (err) {
+  } catch (error) {
 
-    console.log("GET CART ERROR => ", err);
+    console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Get cart error",
+      error: error.message,
     });
+
   }
+
 };
 
 
-// ================= UPDATE CART QUANTITY =================
-
-exports.updateCartQuantity = async (req, res) => {
-
-  try {
-
-    const token =
-      req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
-
-    const { cart_id, quantity } = req.body;
-
-    if (!cart_id || !quantity) {
-
-      return res.status(400).json({
-        success: false,
-        message: "Cart id and quantity required",
-      });
-    }
-
-    await db.query(
-
-      "UPDATE cart SET quantity=? WHERE id=?",
-
-      [quantity, cart_id]
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Quantity updated successfully",
-    });
-
-  } catch (err) {
-
-    console.log("UPDATE CART ERROR => ", err);
-
-    res.status(500).json({
-      success: false,
-      message: "Update cart error",
-    });
-  }
-};
 
 
-// ================= REMOVE CART ITEM =================
+// ======================================
+// REMOVE CART ITEM
+// ======================================
 
 exports.removeCartItem = async (req, res) => {
 
   try {
 
-    const token =
-      req.headers.authorization?.split(" ")[1];
+    const userId = req.user.user_id;
 
-    if (!token) {
+    const cartId = req.params.id;
 
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
 
-    jwt.verify(
-      token,
-      process.env.JWT_SECRET
+    // CHECK ITEM EXISTS
+    const [item] = await db.query(
+      "SELECT * FROM cart WHERE id = ? AND user_id = ?",
+      [cartId, userId]
     );
 
-    const { cart_id } = req.body;
 
-    if (!cart_id) {
+    if (item.length === 0) {
+
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+
+    }
+
+
+    // DELETE ITEM
+    await db.query(
+      "DELETE FROM cart WHERE id = ? AND user_id = ?",
+      [cartId, userId]
+    );
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Item removed from cart",
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Remove cart item error",
+      error: error.message,
+    });
+
+  }
+
+};
+
+
+
+
+// ======================================
+// UPDATE QUANTITY
+// ======================================
+
+exports.updateQuantity = async (req, res) => {
+
+  try {
+
+    const userId = req.user.user_id;
+
+    const cartId = req.params.id;
+
+    const { quantity } = req.body;
+
+
+    // VALIDATION
+    if (!quantity || quantity <= 0) {
 
       return res.status(400).json({
         success: false,
-        message: "Cart id required",
+        message: "Valid quantity required",
       });
+
     }
 
-    await db.query(
 
-      "DELETE FROM cart WHERE id=?",
-
-      [cart_id]
+    // CHECK ITEM EXISTS
+    const [item] = await db.query(
+      "SELECT * FROM cart WHERE id = ? AND user_id = ?",
+      [cartId, userId]
     );
 
-    res.status(200).json({
+
+    if (item.length === 0) {
+
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+
+    }
+
+
+    // UPDATE QUANTITY
+    await db.query(
+      "UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?",
+      [quantity, cartId, userId]
+    );
+
+
+    return res.status(200).json({
       success: true,
-      message: "Item removed successfully",
+      message: "Quantity updated successfully",
     });
 
-  } catch (err) {
+  } catch (error) {
 
-    console.log("REMOVE CART ERROR => ", err);
+    console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Remove item error",
+      message: "Update quantity error",
+      error: error.message,
     });
+
   }
+
 };

@@ -1,49 +1,98 @@
 const jwt = require("jsonwebtoken");
 
-const authMiddleware = (req, res, next) => {
+
+// ======================================
+// VERIFY TOKEN MIDDLEWARE
+// ======================================
+
+const verifyToken = (req, res, next) => {
+
   try {
+
+    // GET AUTH HEADER
     const authHeader = req.headers.authorization;
 
+
+    // CHECK AUTH HEADER
     if (!authHeader) {
+
       return res.status(401).json({
-        message: "Authorization header missing"
+        success: false,
+        message: "Authorization header missing",
       });
+
     }
 
+
+    // CHECK TOKEN FORMAT
     if (!authHeader.startsWith("Bearer ")) {
+
       return res.status(401).json({
-        message: "Invalid token format"
+        success: false,
+        message: "Invalid token format",
       });
+
     }
 
+
+    // GET TOKEN
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // VERIFY TOKEN
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+
+    // SAVE USER DATA
     req.user = decoded;
+
+
+    // DEBUG
+    console.log("DECODED USER :", decoded);
+
 
     next();
 
-  } catch (err) {
+  } catch (error) {
 
-    if (err.name === "TokenExpiredError") {
+    console.log("TOKEN ERROR :", error.message);
+
+
+    // TOKEN EXPIRED
+    if (error.name === "TokenExpiredError") {
+
       return res.status(401).json({
-        message: "Token expired"
+        success: false,
+        message: "Token expired",
       });
+
     }
 
-    if (err.name === "JsonWebTokenError") {
+
+    // INVALID TOKEN
+    if (error.name === "JsonWebTokenError") {
+
       return res.status(401).json({
-        message: "Invalid token"
+        success: false,
+        message: "Invalid token",
       });
+
     }
 
-    console.error("Auth Error:", err.message);
 
+    // OTHER ERRORS
     return res.status(500).json({
-      message: "Authentication failed"
+      success: false,
+      message: "Authentication failed",
+      error: error.message,
     });
+
   }
+
 };
 
-module.exports = authMiddleware;
+
+module.exports = verifyToken;

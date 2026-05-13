@@ -2,35 +2,67 @@ const express = require("express");
 
 const router = express.Router();
 
-const CartController =
-require("../controllers/CartController");
 
-// ================= ADD TO CART =================
+// CONTROLLERS
+const {
+  addToCart,
+  getCart,
+  removeCartItem,
+  updateQuantity,
+} = require("../controllers/cartController");
+
+
+// MIDDLEWARE
+const verifyToken =
+require("../middleware/AuthMiddleWare");
+
+
+
+// ======================================
+// ADD TO CART
+// ======================================
 
 router.post(
   "/add",
-  CartController.addToCart
+  verifyToken,
+  addToCart
 );
 
-// ================= GET CART =================
+
+
+// ======================================
+// GET USER CART
+// ======================================
 
 router.get(
   "/get-cart",
-  CartController.getCart
+  verifyToken,
+  getCart
 );
 
-// ================= UPDATE CART =================
 
-router.put(
-  "/update-cart",
-  CartController.updateCartQuantity
-);
 
-// ================= REMOVE CART =================
+// ======================================
+// REMOVE CART ITEM
+// ======================================
 
 router.delete(
-  "/remove-cart",
-  CartController.removeCartItem
+  "/remove/:id",
+  verifyToken,
+  removeCartItem
 );
+
+
+
+// ======================================
+// UPDATE QUANTITY
+// ======================================
+
+router.put(
+  "/update/:id",
+  verifyToken,
+  updateQuantity
+);
+
 
 module.exports = router;
