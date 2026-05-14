@@ -1,145 +1,155 @@
 const db = require("../config/db");
 
-// ADD TO FAVORITE
-const addToFavorite = async (req, res) => {
+// ================= ADD FAVORITE =================
 
-    try {
+exports.addFavorite = async (req, res) => {
+  try {
 
-        const user_id = req.user.id;
-        const { product_id } = req.body;
+    const user_id = req.user.id;
 
-        if (!product_id) {
-            return res.status(400).json({
-                success: false,
-                message: "Product id required"
-            });
-        }
+    const { product_id } = req.body;
 
-        const sql = `
-            INSERT INTO favorites (user_id, product_id)
-            VALUES (?, ?)
-        `;
-
-        db.query(sql, [user_id, product_id], (err, result) => {
-
-            if (err) {
-
-                // Duplicate favorite
-                if (err.code === "ER_DUP_ENTRY") {
-                    return res.status(200).json({
-                        success: false,
-                        message: "Already in favorites"
-                    });
-                }
-
-                return res.status(500).json({
-                    success: false,
-                    message: "Add favorite error",
-                    error: err.message
-                });
-            }
-
-            res.status(201).json({
-                success: true,
-                message: "Added to favorites"
-            });
-        });
-
-    } catch (e) {
-
-        res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: e.message
-        });
+    if (!product_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product id required",
+      });
     }
+
+    const [alreadyExists] = await db.query(
+      "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
+      [user_id, product_id]
+    );
+
+    if (alreadyExists.length > 0) {
+      return res.json({
+        success: true,
+        message: "Already in favorites",
+      });
+    }
+
+    await db.query(
+      "INSERT INTO favorites (user_id, product_id) VALUES (?, ?)",
+      [user_id, product_id]
+    );
+
+    res.json({
+      success: true,
+      message: "Added to favorites",
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Add favorite error",
+      error: error.message,
+    });
+  }
 };
 
-// REMOVE FAVORITE
-const removeFavorite = async (req, res) => {
 
-    try {
+// ================= REMOVE FAVORITE =================
 
-        const user_id = req.user.id;
-        const { product_id } = req.params;
+exports.removeFavorite = async (req, res) => {
+  try {
 
-        const sql = `
-            DELETE FROM favorites
-            WHERE user_id = ? AND product_id = ?
-        `;
+    const user_id = req.user.id;
 
-        db.query(sql, [user_id, product_id], (err, result) => {
+    const { product_id } = req.body;
 
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Remove favorite error",
-                    error: err.message
-                });
-            }
+    await db.query(
+      "DELETE FROM favorites WHERE user_id=? AND product_id=?",
+      [user_id, product_id]
+    );
 
-            res.json({
-                success: true,
-                message: "Removed from favorites"
-            });
-        });
+    res.json({
+      success: true,
+      message: "Removed from favorites",
+    });
 
-    } catch (e) {
+  } catch (error) {
 
-        res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: e.message
-        });
-    }
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Remove favorite error",
+      error: error.message,
+    });
+  }
 };
 
-// GET FAVORITES
-const getFavorites = async (req, res) => {
 
-    try {
+// ================= GET ALL FAVORITES =================
 
-        const user_id = req.user.id;
+exports.getFavorites = async (req, res) => {
+  try {
 
-        const sql = `
-            SELECT 
-                favorites.id,
-                products.*
-            FROM favorites
-            JOIN products
-            ON favorites.product_id = products.id
-            WHERE favorites.user_id = ?
-            ORDER BY favorites.id DESC
-        `;
+    const user_id = req.user.id;
 
-        db.query(sql, [user_id], (err, result) => {
+    const [favorites] = await db.query(
+      `
+      SELECT 
+      favorites.id as favorite_id,
+      products.*
+      FROM favorites
+      JOIN products
+      ON favorites.product_id = products.id
+      WHERE favorites.user_id=?
+      ORDER BY favorites.id DESC
+      `,
+      [user_id]
+    );
 
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Fetch favorite error",
-                    error: err.message
-                });
-            }
+    res.json({
+      success: true,
+      total: favorites.length,
+      favorites,
+    });
 
-            res.json({
-                success: true,
-                favorites: result
-            });
-        });
+  } catch (error) {
 
-    } catch (e) {
+    console.log(error);
 
-        res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: e.message
-        });
-    }
+    res.status(500).json({
+      success: false,
+      message: "Get favorites error",
+      error: error.message,
+    });
+  }
 };
 
-module.exports = {
-    addToFavorite,
-    removeFavorite,
-    getFavorites
+
+// ================= CHECK FAVORITE =================
+
+exports.checkFavorite = async (req, res) => {
+  try {
+
+    const user_id = req.user.id;
+
+    const product_id = req.params.product_id;
+
+    const [favorite] = await db.query(
+      "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
+      [user_id, product_id]
+    );
+
+    res.json({
+      success: true,
+      isFavorite: favorite.length > 0,
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Check favorite error",
+      error: error.message,
+    });
+  }
 };

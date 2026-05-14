@@ -42,7 +42,8 @@ require("./Routes/CartRoutes");
 
 app.use("/api/cart", cartRoutes);
 
-const favoriteRoutes = require("./Routes/FavoritesRoutes");
+const favoriteRoutes =
+require("./Routes/FavoritesRoutes");
 
 app.use("/api/favorite", favoriteRoutes);
 
