@@ -3,13 +3,15 @@ const express = require("express");
 const router = express.Router();
 
 const authMiddleware =
-require("../middleware/AuthMiddleWare");
+require("../middleware/AuthMiddleware");
 
 const {
+
   addFavorite,
   removeFavorite,
   getFavorites,
   checkFavorite,
+
 } = require("../controllers/FaveroitesController");
 
 

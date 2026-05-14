@@ -1,7 +1,3 @@
-const dns = require("dns");
-
-dns.setDefaultResultOrder("ipv4first");
-
 const express = require("express");
 
 const cors = require("cors");
@@ -11,103 +7,54 @@ require("dotenv").config();
 const app = express();
 
 
+// DATABASE
+const db =
+require("./config/db");
 
-// ======================================
+
+// ROUTES
+const authRoutes =
+require("./routes/AuthRoutes");
+
+const cartRoutes =
+require("./routes/CartRoutes");
+
+const favoriteRoutes =
+require("./Routes/FavoritesRoutes");
+
+
 // MIDDLEWARE
-// ======================================
-
 app.use(cors());
 
-app.use(express.json({
-  limit: "10mb",
-}));
+app.use(express.json());
 
 app.use(express.urlencoded({
   extended: true,
 }));
 
 
-
-// ======================================
-// ROUTES IMPORT
-// ======================================
-
-const authRoutes =
-require("./Routes/AuthRoutes");
-
+// API ROUTES
 app.use("/api/auth", authRoutes);
 
-const cartRoutes =
-require("./Routes/CartRoutes");
-
 app.use("/api/cart", cartRoutes);
-
-const favoriteRoutes =
-require("./Routes/FavoritesRoutes");
 
 app.use("/api/favorite", favoriteRoutes);
 
 
-
-// ======================================
-// HOME ROUTE
-// ======================================
-
+// TEST ROUTE
 app.get("/", (req, res) => {
 
-  return res.status(200).json({
-    success: true,
-    message: "Zyntra API Running Successfully",
-  });
-
+  res.send("API Running...");
 });
 
 
-
-// ======================================
-// 404 ROUTE
-// ======================================
-
-app.use((req, res) => {
-
-  return res.status(404).json({
-    success: false,
-    message: "Route Not Found",
-  });
-
-});
-
-
-
-// ======================================
-// GLOBAL ERROR HANDLER
-// ======================================
-
-app.use((err, req, res, next) => {
-
-  console.log("SERVER ERROR :", err);
-
-
-  return res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-    error: err.message,
-  });
-
-});
-
-
-
-// ======================================
 // SERVER
-// ======================================
-
-const PORT = process.env.PORT || 3000;
+const PORT =
+process.env.PORT || 5000;
 
 app.listen(PORT, () => {
 
   console.log(
-    `Zyntra API running on port ${PORT}`
+    `Server running on port ${PORT}`
   );
-
 });

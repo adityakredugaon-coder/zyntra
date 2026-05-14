@@ -1,27 +1,39 @@
 const db = require("../config/db");
 
+
 // ================= ADD FAVORITE =================
 
-exports.addFavorite = async (req, res) => {
+exports.addFavorite = async (
+  req,
+  res
+) => {
+
   try {
 
-    const user_id = req.user.id;
+    const user_id =
+      req.user.user_id;
 
-    const { product_id } = req.body;
+    const { product_id } =
+      req.body;
 
     if (!product_id) {
+
       return res.status(400).json({
         success: false,
         message: "Product id required",
       });
     }
 
-    const [alreadyExists] = await db.query(
-      "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
-      [user_id, product_id]
-    );
+    const [alreadyExists] =
+      await db.query(
+
+        "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
+
+        [user_id, product_id]
+      );
 
     if (alreadyExists.length > 0) {
+
       return res.json({
         success: true,
         message: "Already in favorites",
@@ -29,7 +41,9 @@ exports.addFavorite = async (req, res) => {
     }
 
     await db.query(
+
       "INSERT INTO favorites (user_id, product_id) VALUES (?, ?)",
+
       [user_id, product_id]
     );
 
@@ -53,15 +67,23 @@ exports.addFavorite = async (req, res) => {
 
 // ================= REMOVE FAVORITE =================
 
-exports.removeFavorite = async (req, res) => {
+exports.removeFavorite = async (
+  req,
+  res
+) => {
+
   try {
 
-    const user_id = req.user.id;
+    const user_id =
+      req.user.user_id;
 
-    const { product_id } = req.body;
+    const { product_id } =
+      req.body;
 
     await db.query(
+
       "DELETE FROM favorites WHERE user_id=? AND product_id=?",
+
       [user_id, product_id]
     );
 
@@ -83,26 +105,34 @@ exports.removeFavorite = async (req, res) => {
 };
 
 
-// ================= GET ALL FAVORITES =================
+// ================= GET FAVORITES =================
 
-exports.getFavorites = async (req, res) => {
+exports.getFavorites = async (
+  req,
+  res
+) => {
+
   try {
 
-    const user_id = req.user.id;
+    const user_id =
+      req.user.user_id;
 
-    const [favorites] = await db.query(
-      `
-      SELECT 
-      favorites.id as favorite_id,
-      products.*
-      FROM favorites
-      JOIN products
-      ON favorites.product_id = products.id
-      WHERE favorites.user_id=?
-      ORDER BY favorites.id DESC
-      `,
-      [user_id]
-    );
+    const [favorites] =
+      await db.query(
+
+        `
+        SELECT
+        favorites.id as favorite_id,
+        products.*
+        FROM favorites
+        JOIN products
+        ON favorites.product_id = products.id
+        WHERE favorites.user_id=?
+        ORDER BY favorites.id DESC
+        `,
+
+        [user_id]
+      );
 
     res.json({
       success: true,
@@ -125,21 +155,31 @@ exports.getFavorites = async (req, res) => {
 
 // ================= CHECK FAVORITE =================
 
-exports.checkFavorite = async (req, res) => {
+exports.checkFavorite = async (
+  req,
+  res
+) => {
+
   try {
 
-    const user_id = req.user.id;
+    const user_id =
+      req.user.user_id;
 
-    const product_id = req.params.product_id;
+    const product_id =
+      req.params.product_id;
 
-    const [favorite] = await db.query(
-      "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
-      [user_id, product_id]
-    );
+    const [favorite] =
+      await db.query(
+
+        "SELECT * FROM favorites WHERE user_id=? AND product_id=?",
+
+        [user_id, product_id]
+      );
 
     res.json({
       success: true,
-      isFavorite: favorite.length > 0,
+      isFavorite:
+      favorite.length > 0,
     });
 
   } catch (error) {
