@@ -35,20 +35,16 @@ app.use(express.urlencoded({
 const authRoutes =
 require("./Routes/AuthRoutes");
 
+app.use("/api/auth", authRoutes);
+
 const cartRoutes =
 require("./Routes/CartRoutes");
 
-
-
-// ======================================
-// API ROUTES
-// ======================================
-
-// AUTH ROUTES
-app.use("/api/auth", authRoutes);
-
-// CART ROUTES
 app.use("/api/cart", cartRoutes);
+
+const favoriteRoutes = require("./Routes/FavoritesRoutes");
+
+app.use("/api/favorite", favoriteRoutes);
 
 
 
