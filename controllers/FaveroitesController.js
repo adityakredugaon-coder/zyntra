@@ -1,7 +1,9 @@
 const db = require("../config/db");
 
 
-// ================= ADD FAVORITE =================
+// ==============================
+// ADD FAVORITE
+// ==============================
 
 exports.addFavorite = async (
   req,
@@ -24,6 +26,11 @@ exports.addFavorite = async (
       });
     }
 
+    console.log("USER ID :", user_id);
+    console.log("PRODUCT ID :", product_id);
+
+
+    // CHECK ALREADY EXISTS
     const [alreadyExists] =
       await db.query(
 
@@ -31,6 +38,7 @@ exports.addFavorite = async (
 
         [user_id, product_id]
       );
+
 
     if (alreadyExists.length > 0) {
 
@@ -40,12 +48,15 @@ exports.addFavorite = async (
       });
     }
 
+
+    // INSERT FAVORITE
     await db.query(
 
       "INSERT INTO favorites (user_id, product_id) VALUES (?, ?)",
 
       [user_id, product_id]
     );
+
 
     res.json({
       success: true,
@@ -65,7 +76,10 @@ exports.addFavorite = async (
 };
 
 
-// ================= REMOVE FAVORITE =================
+
+// ==============================
+// REMOVE FAVORITE
+// ==============================
 
 exports.removeFavorite = async (
   req,
@@ -80,12 +94,14 @@ exports.removeFavorite = async (
     const { product_id } =
       req.body;
 
+
     await db.query(
 
       "DELETE FROM favorites WHERE user_id=? AND product_id=?",
 
       [user_id, product_id]
     );
+
 
     res.json({
       success: true,
@@ -105,7 +121,10 @@ exports.removeFavorite = async (
 };
 
 
-// ================= GET FAVORITES =================
+
+// ==============================
+// GET ALL FAVORITES
+// ==============================
 
 exports.getFavorites = async (
   req,
@@ -117,12 +136,13 @@ exports.getFavorites = async (
     const user_id =
       req.user.user_id;
 
+
     const [favorites] =
       await db.query(
 
         `
         SELECT
-        favorites.id as favorite_id,
+        favorites.id AS favorite_id,
         products.*
         FROM favorites
         JOIN products
@@ -133,6 +153,7 @@ exports.getFavorites = async (
 
         [user_id]
       );
+
 
     res.json({
       success: true,
@@ -153,7 +174,10 @@ exports.getFavorites = async (
 };
 
 
-// ================= CHECK FAVORITE =================
+
+// ==============================
+// CHECK FAVORITE
+// ==============================
 
 exports.checkFavorite = async (
   req,
@@ -168,6 +192,7 @@ exports.checkFavorite = async (
     const product_id =
       req.params.product_id;
 
+
     const [favorite] =
       await db.query(
 
@@ -175,6 +200,7 @@ exports.checkFavorite = async (
 
         [user_id, product_id]
       );
+
 
     res.json({
       success: true,

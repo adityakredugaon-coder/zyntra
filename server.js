@@ -23,6 +23,7 @@ const favoriteRoutes =
 require("./Routes/FavoritesRoutes");
 
 
+
 // MIDDLEWARE
 app.use(cors());
 
@@ -38,7 +39,11 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/cart", cartRoutes);
 
-app.use("/api/favorite", favoriteRoutes);
+
+app.use(
+  "/api/favorite",
+  favoriteRoutes
+);
 
 
 // TEST ROUTE

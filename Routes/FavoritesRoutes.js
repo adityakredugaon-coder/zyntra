@@ -2,48 +2,68 @@ const express = require("express");
 
 const router = express.Router();
 
-const authMiddleware =
-require("../middleware/AuthMiddleware");
+const verifyToken =
+require("../MiddleWare/AuthMiddleWare");
 
 const {
 
   addFavorite,
+
   removeFavorite,
+
   getFavorites,
+
   checkFavorite,
 
 } = require("../controllers/FaveroitesController");
 
 
+
+// ==============================
 // ADD FAVORITE
+// ==============================
+
 router.post(
   "/add",
-  authMiddleware,
+  verifyToken,
   addFavorite
 );
 
 
+
+// ==============================
 // REMOVE FAVORITE
+// ==============================
+
 router.delete(
   "/remove",
-  authMiddleware,
+  verifyToken,
   removeFavorite
 );
 
 
+
+// ==============================
 // GET ALL FAVORITES
+// ==============================
+
 router.get(
   "/all",
-  authMiddleware,
+  verifyToken,
   getFavorites
 );
 
 
+
+// ==============================
 // CHECK FAVORITE
+// ==============================
+
 router.get(
   "/check/:product_id",
-  authMiddleware,
+  verifyToken,
   checkFavorite
 );
+
 
 module.exports = router;
