@@ -14,10 +14,10 @@ require("./config/db");
 
 // ROUTES
 const authRoutes =
-require("./routes/AuthRoutes");
+require("./Routes/AuthRoutes");
 
 const cartRoutes =
-require("./routes/CartRoutes");
+require("./Routes/CartRoutes");
 
 const favoriteRoutes =
 require("./Routes/FavoritesRoutes");
