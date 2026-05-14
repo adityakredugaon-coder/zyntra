@@ -136,24 +136,23 @@ exports.getFavorites = async (
     const user_id =
       req.user.user_id;
 
-
     const [favorites] =
       await db.query(
 
         `
         SELECT
         favorites.id AS favorite_id,
+        favorites.product_id,
         products.*
         FROM favorites
-        JOIN products
-        ON favorites.product_id = products.id
+        INNER JOIN products
+        ON favorites.product_id = products.product_id
         WHERE favorites.user_id=?
         ORDER BY favorites.id DESC
         `,
 
         [user_id]
       );
-
 
     res.json({
       success: true,
