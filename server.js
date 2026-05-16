@@ -48,6 +48,10 @@ const favoriteRoutes =
 const addressRoutes =
   require("./Routes/AddressRoutes");
 
+  const orderRoutes =
+require("./Routes/OrderRoutes");
+
+
 
 
 // =====================================
@@ -73,6 +77,7 @@ app.use(
   "/api/address",
   addressRoutes
 );
+app.use("/api/order", orderRoutes);l̥
 
 
 
