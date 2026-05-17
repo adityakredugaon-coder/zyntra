@@ -11,7 +11,7 @@ const {
 
 } = require("../controllers/addressesController");
 
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/AuthMiddleWare");
 
 
 
