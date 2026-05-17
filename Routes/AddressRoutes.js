@@ -11,6 +11,8 @@ const {
 
 } = require("../controllers/addressesController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 
 
 /*
@@ -21,19 +23,27 @@ api/address/add
 =====================================
 */
 
-router.post("/add", AddAddress);
+router.post(
+    "/add",
+    authMiddleware,
+    AddAddress
+);
 
 
 
 /*
 =====================================
-GET USER ADDRESSES
+GET CURRENT USER ADDRESSES
 GET:
-api/address/user/1
+api/address/get
 =====================================
 */
 
-router.get("/user/:user_id", GetAddresses);
+router.get(
+    "/get",
+    authMiddleware,
+    GetAddresses
+);
 
 
 
@@ -45,7 +55,11 @@ api/address/update/1
 =====================================
 */
 
-router.put("/update/:id", UpdateAddress);
+router.put(
+    "/update/:id",
+    authMiddleware,
+    UpdateAddress
+);
 
 
 
@@ -57,7 +71,11 @@ api/address/delete/1
 =====================================
 */
 
-router.delete("/delete/:id", DeleteAddress);
+router.delete(
+    "/delete/:id",
+    authMiddleware,
+    DeleteAddress
+);
 
 
 

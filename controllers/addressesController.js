@@ -1,22 +1,15 @@
 const db = require("../config/db");
 
 
-
-/*
-=====================================
-ADD ADDRESS
-=====================================
-*/
+// ================= ADD ADDRESS =================
 
 exports.AddAddress = async (req, res) => {
 
-    console.log("BODY:", req.body);
-
     try {
 
-        const {
+        const user_id = req.user.id;
 
-            user_id,
+        const {
             fullName,
             mobile,
             pincode,
@@ -27,15 +20,10 @@ exports.AddAddress = async (req, res) => {
             landmark,
             addressType,
             isDefault
+        } = req.body;
 
-        } = req.body || {};
-
-
-
-        // REQUIRED FIELDS VALIDATION
 
         if (
-            !user_id ||
             !fullName ||
             !mobile ||
             !pincode ||
@@ -44,160 +32,24 @@ exports.AddAddress = async (req, res) => {
             !houseNo ||
             !area
         ) {
-
             return res.status(400).json({
-
                 success: false,
-                message: "All Required Fields Are Mandatory"
+                message: "All fields required"
             });
         }
 
 
-
-        // REMOVE OLD DEFAULT ADDRESS
-
         if (isDefault) {
 
             await db.query(
-
                 "UPDATE addresses SET isDefault = false WHERE user_id = ?",
-
                 [user_id]
             );
         }
 
 
-
-        // INSERT ADDRESS
-
         const sql = `
-
-            INSERT INTO addresses
-            (
-                user_id,
-                fullName,
-                mobile,
-                pincode,
-                state,
-                city,
-                houseNo,
-                area,
-                landmark,
-                addressType,
-                isDefault
-            )
-
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-
-
-        const [result] = await db.query(
-
-            sql,
-
-            [
-                user_id,
-                fullName,
-                mobile,
-                pincode,
-                state,
-                city,
-                houseNo,
-                area,
-                landmark || "",
-                addressType || "Home",
-                isDefault || false
-            ]
-        );
-
-
-
-        return res.status(201).json({
-
-            success: true,
-            message: "Address Added Successfully",
-            addressId: result.insertId
-        });
-
-    } catch (error) {
-
-        console.log("ADD ADDRESS ERROR:", error);
-
-        return res.status(500).json({
-
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-
-
-
-
-/*
-=====================================
-GET USER ADDRESSES
-=====================================
-*/
-
-exports.GetAddresses = async (req, res) => {
-
-    try {
-
-        const user_id = req.params.user_id;
-
-
-
-        const [addresses] = await db.query(
-
-            `SELECT * FROM addresses
-             WHERE user_id = ?
-             ORDER BY isDefault DESC, id DESC`,
-
-            [user_id]
-        );
-
-
-
-        return res.status(200).json({
-
-            success: true,
-            total: addresses.length,
-            data: addresses
-        });
-
-    } catch (error) {
-
-        console.log("GET ADDRESS ERROR:", error);
-
-        return res.status(500).json({
-
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-
-
-
-
-/*
-=====================================
-UPDATE ADDRESS
-=====================================
-*/
-
-exports.UpdateAddress = async (req, res) => {
-
-    try {
-
-        const id = req.params.id;
-
-        const {
-
+        INSERT INTO addresses (
             user_id,
             fullName,
             mobile,
@@ -209,55 +61,122 @@ exports.UpdateAddress = async (req, res) => {
             landmark,
             addressType,
             isDefault
+        )
 
-        } = req.body || {};
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
 
+        const [result] = await db.query(sql, [
+            user_id,
+            fullName,
+            mobile,
+            pincode,
+            state,
+            city,
+            houseNo,
+            area,
+            landmark || "",
+            addressType || "Home",
+            isDefault || false
+        ]);
 
-        // CHECK ADDRESS EXIST
 
-        const [existing] = await db.query(
+        res.status(201).json({
+            success: true,
+            message: "Address added",
+            id: result.insertId
+        });
 
-            "SELECT * FROM addresses WHERE id = ?",
+    } catch (error) {
 
-            [id]
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+// ================= GET ADDRESS =================
+
+exports.GetAddresses = async (req, res) => {
+
+    try {
+
+        const user_id = req.user.id;
+
+        const [addresses] = await db.query(
+            `SELECT * FROM addresses
+             WHERE user_id = ?
+             ORDER BY isDefault DESC, id DESC`,
+            [user_id]
+        );
+
+        res.status(200).json({
+            success: true,
+            data: addresses
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+// ================= UPDATE ADDRESS =================
+
+exports.UpdateAddress = async (req, res) => {
+
+    try {
+
+        const id = req.params.id;
+
+        const user_id = req.user.id;
+
+        const {
+            fullName,
+            mobile,
+            pincode,
+            state,
+            city,
+            houseNo,
+            area,
+            landmark,
+            addressType,
+            isDefault
+        } = req.body;
+
+
+        const [check] = await db.query(
+            "SELECT * FROM addresses WHERE id = ? AND user_id = ?",
+            [id, user_id]
         );
 
 
-
-        if (existing.length === 0) {
-
+        if (check.length === 0) {
             return res.status(404).json({
-
                 success: false,
-                message: "Address Not Found"
+                message: "Address not found"
             });
         }
 
 
-
-        // REMOVE OLD DEFAULT
-
         if (isDefault) {
 
             await db.query(
-
                 "UPDATE addresses SET isDefault = false WHERE user_id = ?",
-
                 [user_id]
             );
         }
 
 
-
-        // UPDATE ADDRESS
-
-        const sql = `
-
-            UPDATE addresses
-
-            SET
-
+        await db.query(
+            `UPDATE addresses SET
             fullName = ?,
             mobile = ?,
             pincode = ?,
@@ -268,16 +187,7 @@ exports.UpdateAddress = async (req, res) => {
             landmark = ?,
             addressType = ?,
             isDefault = ?
-
-            WHERE id = ?
-        `;
-
-
-
-        await db.query(
-
-            sql,
-
+            WHERE id = ?`,
             [
                 fullName,
                 mobile,
@@ -294,19 +204,14 @@ exports.UpdateAddress = async (req, res) => {
         );
 
 
-
-        return res.status(200).json({
-
+        res.status(200).json({
             success: true,
-            message: "Address Updated Successfully"
+            message: "Address updated"
         });
 
     } catch (error) {
 
-        console.log("UPDATE ADDRESS ERROR:", error);
-
-        return res.status(500).json({
-
+        res.status(500).json({
             success: false,
             message: error.message
         });
@@ -314,14 +219,7 @@ exports.UpdateAddress = async (req, res) => {
 };
 
 
-
-
-
-/*
-=====================================
-DELETE ADDRESS
-=====================================
-*/
+// ================= DELETE ADDRESS =================
 
 exports.DeleteAddress = async (req, res) => {
 
@@ -329,53 +227,37 @@ exports.DeleteAddress = async (req, res) => {
 
         const id = req.params.id;
 
+        const user_id = req.user.id;
 
 
-        // CHECK ADDRESS EXIST
-
-        const [existing] = await db.query(
-
-            "SELECT * FROM addresses WHERE id = ?",
-
-            [id]
+        const [check] = await db.query(
+            "SELECT * FROM addresses WHERE id = ? AND user_id = ?",
+            [id, user_id]
         );
 
 
-
-        if (existing.length === 0) {
-
+        if (check.length === 0) {
             return res.status(404).json({
-
                 success: false,
-                message: "Address Not Found"
+                message: "Address not found"
             });
         }
 
 
-
-        // DELETE ADDRESS
-
         await db.query(
-
             "DELETE FROM addresses WHERE id = ?",
-
             [id]
         );
 
 
-
-        return res.status(200).json({
-
+        res.status(200).json({
             success: true,
-            message: "Address Deleted Successfully"
+            message: "Address deleted"
         });
 
     } catch (error) {
 
-        console.log("DELETE ADDRESS ERROR:", error);
-
-        return res.status(500).json({
-
+        res.status(500).json({
             success: false,
             message: error.message
         });

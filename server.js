@@ -7,13 +7,11 @@ require("dotenv").config();
 const app = express();
 
 
-
 // =====================================
 // DATABASE
 // =====================================
 
 require("./config/db");
-
 
 
 // =====================================
@@ -29,7 +27,6 @@ app.use(
     extended: true,
   })
 );
-
 
 
 // =====================================
@@ -48,37 +45,47 @@ const favoriteRoutes =
 const addressRoutes =
   require("./Routes/AddressRoutes");
 
-  const orderRoutes =
-require("./Routes/OrderRoutes");
-
-
+const orderRoutes =
+  require("./Routes/OrderRoutes");
 
 
 // =====================================
 // API ROUTES
 // =====================================
 
+// AUTH
 app.use(
   "/api/auth",
   authRoutes
 );
 
+
+// CART
 app.use(
   "/api/cart",
   cartRoutes
 );
 
+
+// FAVORITE
 app.use(
   "/api/favorite",
   favoriteRoutes
 );
 
+
+// ADDRESS
 app.use(
   "/api/address",
   addressRoutes
 );
-app.use("/api/order", orderRoutes);
 
+
+// ORDER
+app.use(
+  "/api/order",
+  orderRoutes
+);
 
 
 // =====================================
@@ -89,7 +96,6 @@ app.get("/", (req, res) => {
 
   res.send("API Running...");
 });
-
 
 
 // =====================================
@@ -105,7 +111,6 @@ app.use((req, res) => {
     message: "Route Not Found"
   });
 });
-
 
 
 // =====================================
@@ -125,14 +130,12 @@ app.use((err, req, res, next) => {
 });
 
 
-
 // =====================================
 // SERVER
 // =====================================
 
 const PORT =
   process.env.PORT || 3000;
-
 
 
 app.listen(PORT, () => {
