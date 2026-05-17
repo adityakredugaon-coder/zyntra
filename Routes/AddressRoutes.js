@@ -40,7 +40,7 @@ api/address/get
 */
 
 router.get(
-    "/get",
+    "/my-address",
     authMiddleware,
     GetAddresses
 );
