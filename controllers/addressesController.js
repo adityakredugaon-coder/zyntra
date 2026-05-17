@@ -1,13 +1,17 @@
 const db = require("../config/db");
 
 
-// ================= ADD ADDRESS =================
+// ======================================================
+// ADD ADDRESS
+// ======================================================
 
 exports.AddAddress = async (req, res) => {
 
     try {
 
-        const user_id = req.user.id;
+        // ================= CURRENT LOGIN USER =================
+
+        const user_id = req.user.user_id;
 
         const {
             fullName,
@@ -23,6 +27,8 @@ exports.AddAddress = async (req, res) => {
         } = req.body;
 
 
+        // ================= VALIDATION =================
+
         if (
             !fullName ||
             !mobile ||
@@ -32,24 +38,33 @@ exports.AddAddress = async (req, res) => {
             !houseNo ||
             !area
         ) {
+
             return res.status(400).json({
+
                 success: false,
-                message: "All fields required"
+                message: "All fields are required"
             });
         }
 
 
+        // ================= DEFAULT ADDRESS =================
+
         if (isDefault) {
 
             await db.query(
+
                 "UPDATE addresses SET isDefault = false WHERE user_id = ?",
+
                 [user_id]
             );
         }
 
 
+        // ================= INSERT ADDRESS =================
+
         const sql = `
         INSERT INTO addresses (
+
             user_id,
             fullName,
             mobile,
@@ -61,6 +76,7 @@ exports.AddAddress = async (req, res) => {
             landmark,
             addressType,
             isDefault
+
         )
 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -68,6 +84,7 @@ exports.AddAddress = async (req, res) => {
 
 
         const [result] = await db.query(sql, [
+
             user_id,
             fullName,
             mobile,
@@ -82,15 +99,19 @@ exports.AddAddress = async (req, res) => {
         ]);
 
 
-        res.status(201).json({
+        return res.status(201).json({
+
             success: true,
-            message: "Address added",
-            id: result.insertId
+            message: "Address Added Successfully",
+            address_id: result.insertId
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.log("ADD ADDRESS ERROR:", error);
+
+        return res.status(500).json({
+
             success: false,
             message: error.message
         });
@@ -98,29 +119,44 @@ exports.AddAddress = async (req, res) => {
 };
 
 
-// ================= GET ADDRESS =================
+
+// ======================================================
+// GET CURRENT USER ADDRESSES
+// ======================================================
 
 exports.GetAddresses = async (req, res) => {
 
     try {
 
-        const user_id = req.user.id;
+        // ================= CURRENT LOGIN USER =================
+
+        const user_id = req.user.user_id;
+
 
         const [addresses] = await db.query(
-            `SELECT * FROM addresses
-             WHERE user_id = ?
-             ORDER BY isDefault DESC, id DESC`,
+
+            `
+            SELECT * FROM addresses
+            WHERE user_id = ?
+            ORDER BY isDefault DESC, id DESC
+            `,
+
             [user_id]
         );
 
-        res.status(200).json({
+
+        return res.status(200).json({
+
             success: true,
             data: addresses
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.log("GET ADDRESS ERROR:", error);
+
+        return res.status(500).json({
+
             success: false,
             message: error.message
         });
@@ -128,7 +164,10 @@ exports.GetAddresses = async (req, res) => {
 };
 
 
-// ================= UPDATE ADDRESS =================
+
+// ======================================================
+// UPDATE ADDRESS
+// ======================================================
 
 exports.UpdateAddress = async (req, res) => {
 
@@ -136,9 +175,12 @@ exports.UpdateAddress = async (req, res) => {
 
         const id = req.params.id;
 
-        const user_id = req.user.id;
+        // ================= CURRENT LOGIN USER =================
+
+        const user_id = req.user.user_id;
 
         const {
+
             fullName,
             mobile,
             pincode,
@@ -149,34 +191,50 @@ exports.UpdateAddress = async (req, res) => {
             landmark,
             addressType,
             isDefault
+
         } = req.body;
 
 
+        // ================= CHECK ADDRESS =================
+
         const [check] = await db.query(
+
             "SELECT * FROM addresses WHERE id = ? AND user_id = ?",
+
             [id, user_id]
         );
 
 
         if (check.length === 0) {
+
             return res.status(404).json({
+
                 success: false,
-                message: "Address not found"
+                message: "Address Not Found"
             });
         }
 
 
+        // ================= DEFAULT ADDRESS =================
+
         if (isDefault) {
 
             await db.query(
+
                 "UPDATE addresses SET isDefault = false WHERE user_id = ?",
+
                 [user_id]
             );
         }
 
 
+        // ================= UPDATE QUERY =================
+
         await db.query(
-            `UPDATE addresses SET
+
+            `
+            UPDATE addresses SET
+
             fullName = ?,
             mobile = ?,
             pincode = ?,
@@ -187,8 +245,12 @@ exports.UpdateAddress = async (req, res) => {
             landmark = ?,
             addressType = ?,
             isDefault = ?
-            WHERE id = ?`,
+
+            WHERE id = ? AND user_id = ?
+            `,
+
             [
+
                 fullName,
                 mobile,
                 pincode,
@@ -199,19 +261,24 @@ exports.UpdateAddress = async (req, res) => {
                 landmark || "",
                 addressType || "Home",
                 isDefault || false,
-                id
+                id,
+                user_id
             ]
         );
 
 
-        res.status(200).json({
+        return res.status(200).json({
+
             success: true,
-            message: "Address updated"
+            message: "Address Updated Successfully"
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.log("UPDATE ADDRESS ERROR:", error);
+
+        return res.status(500).json({
+
             success: false,
             message: error.message
         });
@@ -219,7 +286,10 @@ exports.UpdateAddress = async (req, res) => {
 };
 
 
-// ================= DELETE ADDRESS =================
+
+// ======================================================
+// DELETE ADDRESS
+// ======================================================
 
 exports.DeleteAddress = async (req, res) => {
 
@@ -227,37 +297,53 @@ exports.DeleteAddress = async (req, res) => {
 
         const id = req.params.id;
 
-        const user_id = req.user.id;
+        // ================= CURRENT LOGIN USER =================
 
+        const user_id = req.user.user_id;
+
+
+        // ================= CHECK ADDRESS =================
 
         const [check] = await db.query(
+
             "SELECT * FROM addresses WHERE id = ? AND user_id = ?",
+
             [id, user_id]
         );
 
 
         if (check.length === 0) {
+
             return res.status(404).json({
+
                 success: false,
-                message: "Address not found"
+                message: "Address Not Found"
             });
         }
 
 
+        // ================= DELETE =================
+
         await db.query(
-            "DELETE FROM addresses WHERE id = ?",
-            [id]
+
+            "DELETE FROM addresses WHERE id = ? AND user_id = ?",
+
+            [id, user_id]
         );
 
 
-        res.status(200).json({
+        return res.status(200).json({
+
             success: true,
-            message: "Address deleted"
+            message: "Address Deleted Successfully"
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.log("DELETE ADDRESS ERROR:", error);
+
+        return res.status(500).json({
+
             success: false,
             message: error.message
         });
