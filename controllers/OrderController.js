@@ -1,99 +1,194 @@
 const db = require("../config/db");
 
-// ================= PLACE ORDER =================
+// ===========================================
+// PLACE ORDER
+// ===========================================
 
-exports.placeOrder = (req, res) => {
+exports.placeOrder = async (req, res) => {
 
-  const {
-    user_id,
-    product_id,
-    address_id,
-    total_price,
-    payment_method,
-  } = req.body;
+  try {
 
-  const sql = `
-    INSERT INTO orders
-    (
-      user_id,
-      product_id,
-      address_id,
-      total_price,
-      payment_method
-    )
-    VALUES (?, ?, ?, ?, ?)
-  `;
+    const user_id = req.user.user_id;
 
-  db.query(
-    sql,
-    [
-      user_id,
+    const {
       product_id,
       address_id,
       total_price,
       payment_method,
-    ],
+    } = req.body;
 
-    (err, result) => {
+    // ================= VALIDATION =================
 
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          message: err.message,
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Order Placed Successfully",
-
-        orderId: result.insertId,
+    if (
+      !product_id ||
+      !address_id ||
+      !total_price ||
+      !payment_method
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required",
       });
     }
-  );
+
+    // ================= CHECK PRODUCT =================
+
+    const [product] = await db.query(
+      `
+      SELECT * FROM products
+      WHERE product_id = ?
+      `,
+      [product_id]
+    );
+
+    if (product.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // ================= CHECK ADDRESS =================
+
+    const [address] = await db.query(
+      `
+      SELECT * FROM addresses
+      WHERE id = ?
+      AND user_id = ?
+      `,
+      [address_id, user_id]
+    );
+
+    if (address.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found",
+      });
+    }
+
+    // ================= INSERT ORDER =================
+
+    const sql = `
+      INSERT INTO orders
+      (
+        user_id,
+        product_id,
+        address_id,
+        total_price,
+        payment_method
+      )
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await db.query(
+      sql,
+      [
+        user_id,
+        product_id,
+        address_id,
+        total_price,
+        payment_method,
+      ]
+    );
+
+    res.status(201).json({
+
+      success: true,
+
+      message: "Order Placed Successfully",
+
+      orderId: result.insertId,
+    });
+
+  } catch (error) {
+
+    console.log(
+      "PLACE ORDER ERROR:",
+      error
+    );
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
 };
 
-// ================= GET USER ORDERS =================
+// ===========================================
+// GET CURRENT USER ORDERS
+// ===========================================
 
-exports.getOrdersByUser = (req, res) => {
+exports.getOrdersByUser = async (req, res) => {
 
-  const userId = req.params.userId;
+  try {
 
-  const sql = `
-    SELECT
+    const user_id =
+      req.user.user_id;
 
-      orders.id,
-      orders.total_price,
-      orders.payment_method,
-      orders.status,
-      orders.created_at,
+    const sql = `
 
-      products.name AS product_name,
-      products.image AS product_image,
-      products.price
+      SELECT
 
-    FROM orders
+        orders.id,
+        orders.total_price,
+        orders.payment_method,
+        orders.status,
+        orders.created_at,
 
-    JOIN products
-    ON orders.product_id = products.id
+        products.product_id AS product_id,
+        products.name AS product_name,
+        products.image AS product_image,
+        products.price,
+        products.discount_price,
 
-    WHERE orders.user_id = ?
+        addresses.fullName,
+        addresses.mobile,
+        addresses.city,
+        addresses.state,
+        addresses.pincode,
+        addresses.houseNo,
+        addresses.area
 
-    ORDER BY orders.id DESC
-  `;
+      FROM orders
 
-  db.query(sql, [userId], (err, result) => {
+      JOIN products
+      ON orders.product_id = products.product_id
 
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: err.message,
-      });
-    }
+      JOIN addresses
+      ON orders.address_id = addresses.id
 
-    res.json({
+      WHERE orders.user_id = ?
+
+      ORDER BY orders.id DESC
+    `;
+
+    const [orders] =
+      await db.query(
+        sql,
+        [user_id]
+      );
+
+    res.status(200).json({
+
       success: true,
-      data: result,
+
+      data: orders,
     });
-  });
+
+  } catch (error) {
+
+    console.log(
+      "GET ORDER ERROR:",
+      error
+    );
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
 };

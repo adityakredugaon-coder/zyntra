@@ -6,13 +6,11 @@ require("dotenv").config();
 
 const app = express();
 
-
 // =====================================
 // DATABASE
 // =====================================
 
 require("./config/db");
-
 
 // =====================================
 // MIDDLEWARE
@@ -27,7 +25,6 @@ app.use(
     extended: true,
   })
 );
-
 
 // =====================================
 // ROUTES IMPORT
@@ -48,7 +45,6 @@ const addressRoutes =
 const orderRoutes =
   require("./Routes/OrderRoutes");
 
-
 // =====================================
 // API ROUTES
 // =====================================
@@ -59,13 +55,11 @@ app.use(
   authRoutes
 );
 
-
 // CART
 app.use(
   "/api/cart",
   cartRoutes
 );
-
 
 // FAVORITE
 app.use(
@@ -73,20 +67,17 @@ app.use(
   favoriteRoutes
 );
 
-
 // ADDRESS
 app.use(
   "/api/address",
   addressRoutes
 );
 
-
 // ORDER
 app.use(
   "/api/order",
   orderRoutes
 );
-
 
 // =====================================
 // TEST ROUTE
@@ -96,7 +87,6 @@ app.get("/", (req, res) => {
 
   res.send("API Running...");
 });
-
 
 // =====================================
 // 404 ROUTE
@@ -108,10 +98,9 @@ app.use((req, res) => {
 
     success: false,
 
-    message: "Route Not Found"
+    message: "Route Not Found",
   });
 });
-
 
 // =====================================
 // GLOBAL ERROR HANDLER
@@ -125,10 +114,9 @@ app.use((err, req, res, next) => {
 
     success: false,
 
-    message: "Internal Server Error"
+    message: "Internal Server Error",
   });
 });
-
 
 // =====================================
 // SERVER
@@ -136,7 +124,6 @@ app.use((err, req, res, next) => {
 
 const PORT =
   process.env.PORT || 3000;
-
 
 app.listen(PORT, () => {
 
