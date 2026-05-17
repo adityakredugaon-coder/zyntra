@@ -20,7 +20,7 @@ const {
 // ======================================================
 
 const authMiddleware =
-require("../middleware/authMiddleware");
+require("../middleware/AuthMiddleWare");
 
 
 // ======================================================
