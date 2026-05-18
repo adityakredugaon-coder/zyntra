@@ -173,12 +173,7 @@ exports.registerUser = async (req, res) => {
 
   try {
 
-    const {
-      name,
-      email,
-      password,
-    } = req.body;
-
+    const { name, email, password } = req.body;
 
     // VALIDATION
     if (!name || !email || !password) {
@@ -187,30 +182,29 @@ exports.registerUser = async (req, res) => {
         success: false,
         message: "All fields are required",
       });
-
     }
 
-
-    // CHECK EXISTING USER
+    // CHECK USER
     const [existingUser] = await db.query(
+
       "SELECT * FROM users WHERE email = ?",
+
       [email]
+
     );
 
     if (existingUser.length > 0) {
 
       return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
 
+        success: false,
+
+        message: "Email already registered",
+      });
     }
 
-
     // HASH PASSWORD
-    const hashedPassword =
-      await bcrypt.hash(password, 10);
-
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // INSERT USER
     const [result] = await db.query(
@@ -231,14 +225,13 @@ exports.registerUser = async (req, res) => {
 
     );
 
-
     return res.status(201).json({
 
       success: true,
 
       message: "User registered successfully",
 
-      user_id: result.insertId,
+      userId: result.insertId,
 
     });
 
@@ -247,15 +240,15 @@ exports.registerUser = async (req, res) => {
     console.log(err);
 
     return res.status(500).json({
+
       success: false,
+
       message: "Register error",
+
       error: err.message,
     });
-
   }
-
 };
-
 
 
 // ======================================
